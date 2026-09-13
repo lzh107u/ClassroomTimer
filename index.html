@@ -1,0 +1,708 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>教室情境倒數計時器</title>
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Import Map for ES Modules (React & Lucide Icons) -->
+  <script type="importmap">
+    {
+      "imports": {
+        "react": "https://esm.sh/react@18.2.0",
+        "react-dom/client": "https://esm.sh/react-dom@18.2.0/client",
+        "lucide-react": "https://esm.sh/lucide-react@0.263.1"
+      }
+    }
+  </script>
+  
+  <!-- Babel Standalone to parse JSX -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen">
+  <div id="root"></div>
+
+  <script type="text/babel" data-type="module">
+    import React, { useState, useEffect, useRef, useCallback } from 'react';
+    import { createRoot } from 'react-dom/client';
+    import {
+      Play,
+      Pause,
+      RotateCcw,
+      Plus,
+      Trash2,
+      Edit3,
+      Music,
+      Image as ImageIcon,
+      Volume2,
+      VolumeX,
+      Clock,
+      X,
+      Maximize2,
+      Minimize2,
+      Sparkles,
+      ChevronRight
+    } from 'lucide-react';
+
+    const DEFAULT_TEMPLATES = [
+      {
+        id: 't1',
+        name: '🍱 午餐時間',
+        duration: 20 * 60,
+        bgColor: 'bg-orange-100 dark:bg-orange-950/40',
+        textColors: 'text-orange-800 dark:text-orange-200',
+        images: [{ name: '午餐背景', url: 'https://cdn.phototourl.com/free/2026-06-29-40b26d2a-7d94-46b3-b349-e1e3bd64b826.png' }],
+        music: [{ name: 'Kana的午餐音樂', url: 'https://raw.githubusercontent.com/lzh107u/ClassroomTimer/main/kana%E7%9A%84%E5%8D%88%E9%A4%90%E9%9F%B3%E6%A8%82.mp3' }]
+      },
+      {
+        id: 't1-1',
+        name: '🍽️ 餐具收拾整理',
+        duration: 10 * 60,
+        bgColor: 'bg-amber-100 dark:bg-amber-950/40',
+        textColors: 'text-amber-800 dark:text-amber-200',
+        images: [{ name: '餐具收拾整理', url: 'https://cdn.phototourl.com/free/2026-06-29-ae47e5a8-8ae8-4f95-af6b-ba60ee45d7c2.png' }],
+        music: [{ name: '餐具收拾整理音樂', url: 'https://www.image2url.com/r2/default/audio/1782713870205-7aaab6c1-a69e-4b23-be31-0082a8fbfc1c.mp3' }]
+      },
+      {
+        id: 't1-3',
+        name: '🪥 刷牙時間',
+        duration: 3 * 60,
+        bgColor: 'bg-cyan-100 dark:bg-cyan-950/40',
+        textColors: 'text-cyan-800 dark:text-cyan-200',
+        images: [],
+        music: [{ name: '刷牙音樂', url: 'https://raw.githubusercontent.com/lzh107u/ClassroomTimer/main/%E5%88%B7%E7%89%99-masshiro.mp3' }]
+      },
+      {
+        id: 't1-4',
+        name: '🧼 洗手時間',
+        duration: 3 * 60,
+        bgColor: 'bg-sky-100 dark:bg-sky-950/40',
+        textColors: 'text-sky-800 dark:text-sky-200',
+        images: [],
+        music: [{ name: '洗手音樂', url: 'https://raw.githubusercontent.com/lzh107u/ClassroomTimer/main/%E6%B4%97%E6%89%8B-Hana%20(Instrumental).mp3' }]
+      },
+      {
+        id: 't1-5',
+        name: '🚶‍♂️ 排隊時間',
+        duration: 3 * 60,
+        bgColor: 'bg-violet-100 dark:bg-violet-950/40',
+        textColors: 'text-violet-800 dark:text-violet-200',
+        images: [],
+        music: [{ name: '排隊音樂', url: 'https://raw.githubusercontent.com/lzh107u/ClassroomTimer/main/%E6%8E%92%E9%9A%8A-Kirari%20(Instrumental).mp3' }]
+      },
+      {
+        id: 't1-2',
+        name: '👋 排隊放學',
+        duration: 5 * 60,
+        bgColor: 'bg-teal-100 dark:bg-teal-950/40',
+        textColors: 'text-teal-800 dark:text-teal-200',
+        images: [{ name: '排隊放學', url: 'https://cdn.phototourl.com/free/2026-06-29-14b15acc-01bb-48dc-9c6b-e8975a9edc8d.png' }],
+        music: [{ name: '排隊放學音樂', url: 'https://raw.githubusercontent.com/lzh107u/ClassroomTimer/main/%E6%94%BE%E5%AD%B8-Matsuri%20(Instrumental).mp3' }]
+      },
+      {
+        id: 't2',
+        name: '🧹 打掃時間',
+        duration: 15 * 60,
+        bgColor: 'bg-emerald-100 dark:bg-emerald-950/40',
+        textColors: 'text-emerald-800 dark:text-emerald-200',
+        images: [{ name: '打掃時間', url: 'https://cdn.phototourl.com/free/2026-06-29-12a7a92a-ea12-4e80-9f52-7138126d9348.png' }],
+        music: [{ name: '打掃時間音樂', url: 'https://www.image2url.com/r2/default/audio/1782713870205-7aaab6c1-a69e-4b23-be31-0082a8fbfc1c.mp3' }]
+      },
+      {
+        id: 't3',
+        name: '⚽ 下課休息',
+        duration: 10 * 60,
+        bgColor: 'bg-lime-100 dark:bg-lime-950/40',
+        textColors: 'text-lime-800 dark:text-lime-200',
+        images: [],
+        music: [{ name: '下課音樂', url: 'https://raw.githubusercontent.com/lzh107u/ClassroomTimer/main/%E4%B8%8B%E8%AA%B2-damn%20(instrumental).mp3' }]
+      }
+    ];
+
+    const formatTime = (seconds) => {
+      const m = Math.floor(seconds / 60);
+      const s = seconds % 60;
+      return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+    };
+
+    function App() {
+      const [activities, setActivities] = useState(() => {
+        try {
+          const saved = localStorage.getItem('classroom_timer_activities');
+          if (saved) return JSON.parse(saved);
+        } catch (e) {
+          console.error("Failed to load activities", e);
+        }
+        return [DEFAULT_TEMPLATES[0]];
+      });
+
+      const [currentIdx, setCurrentIdx] = useState(0);
+      const [timeLeft, setTimeLeft] = useState(() => activities[0]?.duration || 600);
+      const [isRunning, setIsRunning] = useState(false);
+
+      const [currentMusicIdx, setCurrentMusicIdx] = useState(0);
+      const [currentImgIdx, setCurrentImgIdx] = useState(0);
+
+      const [isMuted, setIsMuted] = useState(false);
+      const [volume, setVolume] = useState(0.8);
+      const [isFullscreen, setIsFullscreen] = useState(false);
+
+      const [editingActivity, setEditingActivity] = useState(null);
+      const [isModalOpen, setIsModalOpen] = useState(false);
+
+      const [newImgUrl, setNewImgUrl] = useState('');
+      const [newImgName, setNewImgName] = useState('');
+      const [newMusicUrl, setNewMusicUrl] = useState('');
+      const [newMusicName, setNewMusicName] = useState('');
+
+      const audioRef = useRef(null);
+      const lastMusicUrlRef = useRef(null);
+
+      useEffect(() => {
+        try {
+          const cleaned = activities.map(act => ({
+            ...act,
+            images: act.images ? act.images.filter(img => !img.url.startsWith('blob:')) : [],
+            music: act.music ? act.music.filter(m => !m.url.startsWith('blob:')) : []
+          }));
+          localStorage.setItem('classroom_timer_activities', JSON.stringify(cleaned));
+        } catch (e) {
+          console.error("Failed to save to localStorage", e);
+        }
+      }, [activities]);
+
+      const currentAct = activities[currentIdx] || activities[0] || null;
+
+      const changeActivity = useCallback((newIdx) => {
+        if (newIdx < 0 || newIdx >= activities.length) return;
+        setIsRunning(false);
+        setCurrentIdx(newIdx);
+        setCurrentMusicIdx(0);
+        setCurrentImgIdx(0);
+        setTimeLeft(activities[newIdx].duration);
+        lastMusicUrlRef.current = null;
+        if (audioRef.current) {
+          audioRef.current.pause();
+          audioRef.current.currentTime = 0;
+        }
+      }, [activities]);
+
+      useEffect(() => {
+        let interval = null;
+        if (isRunning && timeLeft > 0) {
+          interval = setInterval(() => {
+            setTimeLeft(prev => prev - 1);
+          }, 1000);
+        } else if (isRunning && timeLeft === 0) {
+          if (currentIdx < activities.length - 1) {
+            changeActivity(currentIdx + 1);
+            setIsRunning(true);
+          } else {
+            setIsRunning(false);
+          }
+        }
+        return () => clearInterval(interval);
+      }, [isRunning, timeLeft, currentIdx, activities.length, changeActivity]);
+
+      useEffect(() => {
+        const audio = audioRef.current;
+        if (!audio) return;
+
+        const musicList = currentAct?.music || [];
+        const validMusicIdx = (currentMusicIdx < musicList.length) ? currentMusicIdx : 0;
+        const currentTrack = musicList[validMusicIdx];
+
+        if (isRunning && currentTrack && currentTrack.url && !isMuted) {
+          if (lastMusicUrlRef.current !== currentTrack.url) {
+            audio.src = currentTrack.url;
+            lastMusicUrlRef.current = currentTrack.url;
+            audio.currentTime = 0;
+          }
+          audio.volume = volume;
+          audio.play().catch(err => console.log("Audio play deferred:", err));
+        } else {
+          audio.pause();
+        }
+      }, [isRunning, currentIdx, currentMusicIdx, currentAct, isMuted, volume]);
+
+      const handleAudioEnded = () => {
+        const musicList = currentAct?.music || [];
+        if (musicList.length > 0) {
+          const nextIdx = (currentMusicIdx + 1) % musicList.length;
+          setCurrentMusicIdx(nextIdx);
+          lastMusicUrlRef.current = null;
+        }
+      };
+
+      const handleAddTemplate = (template) => {
+        const newAct = {
+          ...template,
+          id: Date.now().toString() + Math.random().toString().slice(2, 5)
+        };
+        setActivities(prev => [...prev, newAct]);
+      };
+
+      const handleDeleteActivity = (e, index) => {
+        e.stopPropagation();
+        if (activities.length <= 1) {
+          alert("請至少保留一個活動！");
+          return;
+        }
+        const updated = activities.filter((_, i) => i !== index);
+        setActivities(updated);
+        if (index === currentIdx) {
+          const nextIdx = Math.max(0, index - 1);
+          changeActivity(nextIdx);
+        } else if (index < currentIdx) {
+          setCurrentIdx(currentIdx - 1);
+        }
+      };
+
+      const handleReset = () => {
+        setIsRunning(false);
+        if (currentAct) {
+          setTimeLeft(currentAct.duration);
+        }
+        setCurrentMusicIdx(0);
+        setCurrentImgIdx(0);
+        if (audioRef.current) {
+          audioRef.current.pause();
+          audioRef.current.currentTime = 0;
+        }
+      };
+
+      const openEditModal = (act) => {
+        setEditingActivity(JSON.parse(JSON.stringify(act)));
+        setNewImgUrl('');
+        setNewImgName('');
+        setNewMusicUrl('');
+        setNewMusicName('');
+        setIsModalOpen(true);
+      };
+
+      const saveEditedActivity = () => {
+        if (!editingActivity) return;
+        setActivities(prev => prev.map(a => a.id === editingActivity.id ? editingActivity : a));
+        setIsModalOpen(false);
+        if (activities[currentIdx]?.id === editingActivity.id) {
+          setTimeLeft(editingActivity.duration);
+        }
+      };
+
+      const handleAddImageUrl = () => {
+        if (!newImgUrl.trim()) return;
+        const newItem = {
+          name: newImgName.trim() || '自訂圖片',
+          url: newImgUrl.trim()
+        };
+        setEditingActivity(prev => ({
+          ...prev,
+          images: [...(prev.images || []), newItem]
+        }));
+        setNewImgUrl('');
+        setNewImgName('');
+      };
+
+      const handleAddMusicUrl = () => {
+        if (!newMusicUrl.trim()) return;
+        let finalUrl = newMusicUrl.trim();
+        if (finalUrl.includes('github.com') && finalUrl.includes('/blob/')) {
+          finalUrl = finalUrl.replace('github.com', 'raw.githubusercontent.com').replace('/blob/', '/');
+        }
+        const newItem = {
+          name: newMusicName.trim() || '自訂音樂',
+          url: finalUrl
+        };
+        setEditingActivity(prev => ({
+          ...prev,
+          music: [...(prev.music || []), newItem]
+        }));
+        setNewMusicUrl('');
+        setNewMusicName('');
+      };
+
+      const currentImg = currentAct?.images?.[currentImgIdx]?.url;
+
+      return (
+        <div className={`min-h-screen bg-slate-900 text-slate-100 flex flex-col font-sans transition-all duration-300 ${isFullscreen ? 'p-0' : 'p-4 md:p-6'}`}>
+          <audio ref={audioRef} onEnded={handleAudioEnded} />
+
+          {!isFullscreen && (
+            <header className="max-w-6xl w-full mx-auto mb-6 flex flex-wrap justify-between items-center gap-4 bg-slate-800/80 p-4 rounded-2xl border border-slate-700 shadow-lg backdrop-blur-md">
+              <div className="flex items-center space-x-3">
+                <div className="p-2.5 bg-indigo-600 rounded-xl text-white shadow-md shadow-indigo-500/30">
+                  <Clock className="w-6 h-6" />
+                </div>
+                <div>
+                  <h1 className="text-xl font-bold text-white tracking-wide">教室情境倒數計時器</h1>
+                  <p className="text-xs text-slate-400">教學流程管理・情境音樂播放器</p>
+                </div>
+              </div>
+
+              <div className="flex items-center space-x-3">
+                <button
+                  onClick={() => setIsMuted(!isMuted)}
+                  className={`p-2.5 rounded-xl border transition ${
+                    isMuted
+                      ? 'bg-red-500/20 text-red-400 border-red-500/30'
+                      : 'bg-slate-700 text-slate-200 border-slate-600 hover:bg-slate-600'
+                  }`}
+                  title={isMuted ? "取消靜音" : "靜音"}
+                >
+                  {isMuted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
+                </button>
+
+                <div className="flex items-center space-x-2 bg-slate-700/50 px-3 py-1.5 rounded-xl border border-slate-600/50">
+                  <Volume2 className="w-4 h-4 text-slate-400" />
+                  <input
+                    type="range"
+                    min="0"
+                    max="1"
+                    step="0.05"
+                    value={volume}
+                    onChange={(e) => setVolume(parseFloat(e.target.value))}
+                    className="w-16 accent-indigo-500 cursor-pointer"
+                  />
+                </div>
+
+                <button
+                  onClick={() => setIsFullscreen(!isFullscreen)}
+                  className="p-2.5 bg-slate-700 text-slate-200 border border-slate-600 rounded-xl hover:bg-slate-600 transition"
+                  title="全螢幕模式"
+                >
+                  {isFullscreen ? <Minimize2 className="w-5 h-5" /> : <Maximize2 className="w-5 h-5" />}
+                </button>
+              </div>
+            </header>
+          )}
+
+          <div className={`max-w-6xl w-full mx-auto flex-1 grid gap-6 ${isFullscreen ? 'grid-cols-1 h-screen p-6' : 'grid-cols-1 lg:grid-cols-3'}`}>
+            <div className={`lg:col-span-2 flex flex-col justify-between rounded-3xl overflow-hidden relative border border-slate-700/60 shadow-2xl transition-all duration-500 ${currentAct?.bgColor || 'bg-slate-800'}`}>
+              
+              {currentImg && (
+                <div className="absolute inset-0 z-0 opacity-25 transition-opacity duration-1000">
+                  <img src={currentImg} alt="Activity Background" className="w-full h-full object-cover" />
+                </div>
+              )}
+
+              <div className="relative z-10 p-6 md:p-10 flex flex-col justify-between h-full">
+                <div className="flex items-center justify-between">
+                  <span className="px-4 py-1.5 rounded-full bg-slate-900/60 text-slate-200 text-sm font-medium backdrop-blur-md border border-slate-700/50">
+                    活動 {currentIdx + 1} / {activities.length}
+                  </span>
+
+                  <div className="flex items-center space-x-2 bg-slate-900/60 backdrop-blur-md p-1 rounded-2xl border border-slate-700/50">
+                    <button
+                      onClick={() => changeActivity(currentIdx - 1)}
+                      disabled={currentIdx === 0}
+                      className="p-2 text-slate-300 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition"
+                    >
+                      <ChevronRight className="w-5 h-5 rotate-180" />
+                    </button>
+                    <button
+                      onClick={() => changeActivity(currentIdx + 1)}
+                      disabled={currentIdx === activities.length - 1}
+                      className="p-2 text-slate-300 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition"
+                    >
+                      <ChevronRight className="w-5 h-5" />
+                    </button>
+                  </div>
+                </div>
+
+                <div className="my-8 text-center flex flex-col items-center justify-center">
+                  <h2 className={`text-3xl md:text-5xl font-extrabold mb-4 tracking-tight drop-shadow-md ${currentAct?.textColors || 'text-white'}`}>
+                    {currentAct?.name || '請選擇活動'}
+                  </h2>
+
+                  <div className="text-7xl sm:text-8xl md:text-9xl font-black tracking-widest font-mono text-slate-900 drop-shadow-lg my-2 dark:text-white">
+                    {formatTime(timeLeft)}
+                  </div>
+
+                  {currentAct?.music && currentAct.music.length > 0 && (
+                    <div className="mt-4 flex items-center space-x-2 bg-slate-900/70 text-indigo-300 text-xs md:text-sm px-4 py-2 rounded-xl backdrop-blur-md border border-indigo-500/30">
+                      <Music className="w-4 h-4 animate-pulse" />
+                      <span className="truncate max-w-xs md:max-w-md">
+                        正在播放: {currentAct.music[currentMusicIdx]?.name || '預設音軌'}
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex flex-wrap items-center justify-center gap-4 bg-slate-900/80 backdrop-blur-md p-4 rounded-2xl border border-slate-700/60 shadow-xl">
+                  <button
+                    onClick={() => setIsRunning(!isRunning)}
+                    className={`flex items-center space-x-2 px-8 py-3.5 rounded-xl text-lg font-bold shadow-lg transition transform active:scale-95 ${
+                      isRunning
+                        ? 'bg-amber-500 hover:bg-amber-600 text-slate-950 shadow-amber-500/20'
+                        : 'bg-emerald-500 hover:bg-emerald-600 text-slate-950 shadow-emerald-500/20'
+                    }`}
+                  >
+                    {isRunning ? <Pause className="w-6 h-6 fill-current" /> : <Play className="w-6 h-6 fill-current" />}
+                    <span>{isRunning ? '暫停' : '開始倒數'}</span>
+                  </button>
+
+                  <button
+                    onClick={handleReset}
+                    className="flex items-center space-x-2 px-5 py-3.5 rounded-xl bg-slate-700 hover:bg-slate-600 text-slate-200 font-semibold transition active:scale-95 border border-slate-600"
+                  >
+                    <RotateCcw className="w-5 h-5" />
+                    <span>重置</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {}
+            {!isFullscreen && (
+              <div className="flex flex-col space-y-6">
+                <div className="bg-slate-800/90 rounded-3xl p-5 border border-slate-700 shadow-xl flex flex-col h-full max-h-[480px]">
+                  <div className="flex items-center justify-between mb-4 pb-2 border-b border-slate-700">
+                    <h3 className="font-bold text-slate-200 flex items-center space-x-2">
+                      <Clock className="w-4 h-4 text-indigo-400" />
+                      <span>今日教學流程</span>
+                    </h3>
+                    <span className="text-xs text-slate-400">{activities.length} 個活動</span>
+                  </div>
+
+                  <div className="flex-1 overflow-y-auto space-y-2.5 pr-1">
+                    {activities.map((act, index) => {
+                      const isActive = index === currentIdx;
+                      return (
+                        <div
+                          key={act.id || index}
+                          onClick={() => changeActivity(index)}
+                          className={`p-3.5 rounded-2xl border cursor-pointer transition flex items-center justify-between group ${
+                            isActive
+                              ? 'bg-indigo-600/20 border-indigo-500/60 text-white shadow-md'
+                              : 'bg-slate-700/40 border-slate-700 hover:bg-slate-700/70 text-slate-300'
+                          }`}
+                        >
+                          <div className="flex items-center space-x-3 overflow-hidden">
+                            <span className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold ${
+                              isActive ? 'bg-indigo-600 text-white' : 'bg-slate-700 text-slate-400'
+                            }`}>
+                              {index + 1}
+                            </span>
+                            <div className="truncate">
+                              <p className="font-semibold text-sm truncate">{act.name}</p>
+                              <p className="text-xs text-slate-400 font-mono">{formatTime(act.duration)}</p>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center space-x-1 opacity-90 group-hover:opacity-100">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                openEditModal(act);
+                              }}
+                              className="p-1.5 hover:bg-slate-600/60 rounded-lg text-slate-400 hover:text-slate-200 transition"
+                              title="編輯"
+                            >
+                              <Edit3 className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={(e) => handleDeleteActivity(e, index)}
+                              className="p-1.5 hover:bg-red-500/20 rounded-lg text-slate-400 hover:text-red-400 transition"
+                              title="刪除"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div className="bg-slate-800/90 rounded-3xl p-5 border border-slate-700 shadow-xl">
+                  <h3 className="font-bold text-slate-200 mb-3 flex items-center space-x-2">
+                    <Sparkles className="w-4 h-4 text-amber-400" />
+                    <span>快速加入活動模板</span>
+                  </h3>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    {DEFAULT_TEMPLATES.map((tpl) => (
+                      <button
+                        key={tpl.id}
+                        onClick={() => handleAddTemplate(tpl)}
+                        className="flex items-center justify-between p-2.5 rounded-xl bg-slate-700/50 border border-slate-600/60 hover:bg-slate-700 text-xs font-medium text-slate-200 transition text-left group"
+                      >
+                        <span className="truncate">{tpl.name}</span>
+                        <Plus className="w-3.5 h-3.5 text-indigo-400 group-hover:scale-125 transition-transform flex-shrink-0 ml-1" />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {isModalOpen && editingActivity && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fade-in">
+              <div className="bg-slate-800 border border-slate-700 rounded-3xl p-6 max-w-lg w-full shadow-2xl space-y-5 max-h-[90vh] overflow-y-auto">
+                <div className="flex justify-between items-center border-b border-slate-700 pb-3">
+                  <h3 className="text-lg font-bold text-white flex items-center space-x-2">
+                    <Edit3 className="w-5 h-5 text-indigo-400" />
+                    <span>編輯活動內容</span>
+                  </h3>
+                  <button
+                    onClick={() => setIsModalOpen(false)}
+                    className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-700"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-xs font-medium text-slate-400 mb-1">活動名稱</label>
+                    <input
+                      type="text"
+                      value={editingActivity.name}
+                      onChange={(e) => setEditingActivity({ ...editingActivity, name: e.target.value })}
+                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2 text-sm text-white focus:outline-none focus:border-indigo-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-slate-400 mb-1">倒數時間 (秒)</label>
+                    <input
+                      type="number"
+                      value={editingActivity.duration}
+                      onChange={(e) => setEditingActivity({ ...editingActivity, duration: parseInt(e.target.value) || 0 })}
+                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2 text-sm text-white focus:outline-none focus:border-indigo-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-slate-400 mb-1 flex items-center justify-between">
+                      <span>背景音樂 URL 列表</span>
+                      <span className="text-slate-500 text-[10px]">支援 GitHub Direct Link</span>
+                    </label>
+                    
+                    <div className="space-y-2 mb-2">
+                      {editingActivity.music && editingActivity.music.map((m, idx) => (
+                        <div key={idx} className="flex items-center justify-between bg-slate-900 px-3 py-2 rounded-xl text-xs border border-slate-700">
+                          <div className="truncate flex items-center space-x-2">
+                            <Music className="w-3.5 h-3.5 text-indigo-400" />
+                            <span className="truncate text-slate-200">{m.name}</span>
+                          </div>
+                          <button
+                            onClick={() => {
+                              const updated = editingActivity.music.filter((_, i) => i !== idx);
+                              setEditingActivity({ ...editingActivity, music: updated });
+                            }}
+                            className="text-red-400 hover:text-red-300 ml-2"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-2 bg-slate-900/50 p-2.5 rounded-xl border border-slate-700/60">
+                      <input
+                        type="text"
+                        placeholder="歌曲名稱 (例如: 晨間背景樂)"
+                        value={newMusicName}
+                        onChange={(e) => setNewMusicName(e.target.value)}
+                        className="bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none"
+                      />
+                      <div className="flex space-x-2">
+                        <input
+                          type="text"
+                          placeholder="貼上 GitHub / MP3 音樂網址..."
+                          value={newMusicUrl}
+                          onChange={(e) => setNewMusicUrl(e.target.value)}
+                          className="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none"
+                        />
+                        <button
+                          type="button"
+                          onClick={handleAddMusicUrl}
+                          className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-semibold"
+                        >
+                          加入
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-slate-400 mb-1">背景圖片 URL 列表</label>
+                    <div className="space-y-2 mb-2">
+                      {editingActivity.images && editingActivity.images.map((img, idx) => (
+                        <div key={idx} className="flex items-center justify-between bg-slate-900 px-3 py-2 rounded-xl text-xs border border-slate-700">
+                          <div className="truncate flex items-center space-x-2">
+                            <ImageIcon className="w-3.5 h-3.5 text-emerald-400" />
+                            <span className="truncate text-slate-200">{img.name}</span>
+                          </div>
+                          <button
+                            onClick={() => {
+                              const updated = editingActivity.images.filter((_, i) => i !== idx);
+                              setEditingActivity({ ...editingActivity, images: updated });
+                            }}
+                            className="text-red-400 hover:text-red-300 ml-2"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-2 bg-slate-900/50 p-2.5 rounded-xl border border-slate-700/60">
+                      <input
+                        type="text"
+                        placeholder="圖片描述 (例如: 教室打掃圖)"
+                        value={newImgName}
+                        onChange={(e) => setNewImgName(e.target.value)}
+                        className="bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none"
+                      />
+                      <div className="flex space-x-2">
+                        <input
+                          type="text"
+                          placeholder="貼上圖片網址 (.png / .jpg)..."
+                          value={newImgUrl}
+                          onChange={(e) => setNewImgUrl(e.target.value)}
+                          className="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none"
+                        />
+                        <button
+                          type="button"
+                          onClick={handleAddImageUrl}
+                          className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-semibold"
+                        >
+                          加入
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-end space-x-3 border-t border-slate-700 pt-4">
+                  <button
+                    onClick={() => setIsModalOpen(false)}
+                    className="px-4 py-2 rounded-xl text-sm font-semibold bg-slate-700 hover:bg-slate-600 text-slate-300"
+                  >
+                    取消
+                  </button>
+                  <button
+                    onClick={saveEditedActivity}
+                    className="px-5 py-2 rounded-xl text-sm font-semibold bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-600/30"
+                  >
+                    儲存變更
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    const root = createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+</body>
+</html>

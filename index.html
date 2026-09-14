@@ -369,7 +369,15 @@
               </div>
             </header>
           )}
-
+          {isFullscreen && (
+            <button
+              onClick={() => setIsFullscreen(false)}
+              className="fixed top-4 right-4 z-50 p-3 bg-slate-800/80 text-white border border-slate-600 rounded-xl hover:bg-slate-700 transition"
+              title="退出全螢幕"
+            >
+              <Minimize2 className="w-5 h-5" />
+            </button>
+          )}
           <div className={`max-w-6xl w-full mx-auto flex-1 grid gap-6 ${isFullscreen ? 'grid-cols-1 h-screen p-6' : 'grid-cols-1 lg:grid-cols-3'}`}>
             <div className={`lg:col-span-2 flex flex-col justify-between rounded-3xl overflow-hidden relative border border-slate-700/60 shadow-2xl transition-all duration-500 ${currentAct?.bgColor || 'bg-slate-800'}`}>
               

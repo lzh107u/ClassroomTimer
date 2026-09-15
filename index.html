@@ -137,6 +137,8 @@
       const [currentMusicIdx, setCurrentMusicIdx] = useState(0);
       const [currentImgIdx, setCurrentImgIdx] = useState(0);
 
+      const [musicPlayId, setMusicPlayId] = useState(0);
+
       const [isMuted, setIsMuted] = useState(false);
       const [volume, setVolume] = useState(0.8);
       const [isFullscreen, setIsFullscreen] = useState(false);
@@ -211,19 +213,26 @@
             audio.src = currentTrack.url;
             lastMusicUrlRef.current = currentTrack.url;
             audio.currentTime = 0;
+          } else {
+            audio.currentTime = 0;
           }
+
           audio.volume = volume;
           audio.play().catch(err => console.log("Audio play deferred:", err));
         } else {
           audio.pause();
         }
-      }, [isRunning, currentIdx, currentMusicIdx, currentAct, isMuted, volume]);
+      }, [isRunning, currentIdx, currentMusicIdx, musicPlayId, currentAct, isMuted, volume]);
 
       const handleAudioEnded = () => {
         const musicList = currentAct?.music || [];
+
+        if (musicList.length === 0) return;
+
         if (musicList.length > 0) {
           const nextIdx = (currentMusicIdx + 1) % musicList.length;
           setCurrentMusicIdx(nextIdx);
+          setMusicPlayId(prev => prev + 1);
           lastMusicUrlRef.current = null;
         }
       };
